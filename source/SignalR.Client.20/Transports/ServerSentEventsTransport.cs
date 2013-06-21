@@ -14,7 +14,8 @@ namespace SignalR.Client._20.Transports
         private int m_initializedCalled;
         private static readonly TimeSpan m_reconnectDelay = TimeSpan.FromSeconds(2);
         private TimeSpan m_connectionTimeout; // Time allowed before failing the connect request
-        
+        private int m_connectionRetry;
+
         public ServerSentEventsTransport()
             : this(new DefaultHttpClient())
         {
@@ -23,9 +24,10 @@ namespace SignalR.Client._20.Transports
         public ServerSentEventsTransport(IHttpClient httpClient)
             : base(httpClient, "serverSentEvents")
         {
-            m_connectionTimeout = TimeSpan.FromSeconds(60); // to support slow connections, otherwise no more than 2 seconds
+            m_connectionTimeout = TimeSpan.FromSeconds(2);
+            m_connectionRetry = 30;
         }
-        
+
         protected override void OnStart(IConnection connection,
             string data,
             Action initializeCallback,
@@ -47,7 +49,7 @@ namespace SignalR.Client._20.Transports
                 connection.Items.Remove(m_readerKey);
             }
         }
-        
+
         private void Reconnect(IConnection connection, string data)
         {
             if (!connection.IsActive)
@@ -157,14 +159,32 @@ namespace SignalR.Client._20.Transports
 
             if (initializeCallback != null)
             {
-                Thread.Sleep(m_connectionTimeout);
-                if (Interlocked.CompareExchange(ref m_initializedCalled, 1, 0) == 0)
+                int _tryed = 0;
+                while (true)
                 {
-                    // Stop the connection
-                    Stop(connection);
+                    Thread.Sleep(m_connectionTimeout);
+                    _tryed++;
 
-                    // Connection timeout occurred
-                    errorCallback(new TimeoutException());
+                    Debug.Write("Checking if connection initialized for the '" + _tryed.ToString() + "' time: ");
+                    if (Interlocked.CompareExchange(ref m_initializedCalled, 1, 0) == 0)
+                    {
+                        if (_tryed < m_connectionRetry)
+                        {
+                            Debug.WriteLine("failed.");
+                            continue;
+                        }
+
+                        // Stop the connection
+                        Stop(connection);
+
+                        // Connection timeout occurred
+                        errorCallback(new TimeoutException());
+                    }
+                    else
+                    {
+                        Debug.WriteLine("success.");
+                        break;
+                    }
                 }
             }
         }
