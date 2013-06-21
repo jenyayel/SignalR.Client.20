@@ -10,11 +10,11 @@ namespace SignalR.Client._20.Transports
 {
     public class ServerSentEventsTransport : HttpBasedTransport
     {
-        private const string ReaderKey = "sse.reader";
-        private int _initializedCalled;
-
-        private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(2);
-
+        private const string m_readerKey = "sse.reader";
+        private int m_initializedCalled;
+        private static readonly TimeSpan m_reconnectDelay = TimeSpan.FromSeconds(2);
+        private TimeSpan m_connectionTimeout; // Time allowed before failing the connect request
+        
         public ServerSentEventsTransport()
             : this(new DefaultHttpClient())
         {
@@ -23,90 +23,102 @@ namespace SignalR.Client._20.Transports
         public ServerSentEventsTransport(IHttpClient httpClient)
             : base(httpClient, "serverSentEvents")
         {
-            ConnectionTimeout = TimeSpan.FromSeconds(2);
+            m_connectionTimeout = TimeSpan.FromSeconds(60); // to support slow connections, otherwise no more than 2 seconds
         }
-
-        /// <summary>
-        /// Time allowed before failing the connect request
-        /// </summary>
-        public TimeSpan ConnectionTimeout { get; set; }
-
-        protected override void OnStart(IConnection connection, string data, Action initializeCallback, Action<Exception> errorCallback)
+        
+        protected override void OnStart(IConnection connection,
+            string data,
+            Action initializeCallback,
+            Action<Exception> errorCallback)
         {
             OpenConnection(connection, data, initializeCallback, errorCallback);
         }
 
+        protected override void OnBeforeAbort(IConnection connection)
+        {
+            // Get the reader from the connection and stop it
+            AsyncStreamReader _reader = ConnectionExtensions.GetValue<AsyncStreamReader>(connection, m_readerKey);
+            if (_reader != null)
+            {
+                // Stop reading data from the stream
+                _reader.StopReading(false);
+
+                // Remove the reader
+                connection.Items.Remove(m_readerKey);
+            }
+        }
+        
         private void Reconnect(IConnection connection, string data)
         {
             if (!connection.IsActive)
-            {
                 return;
-            }
 
             // Wait for a bit before reconnecting
-            Thread.Sleep(ReconnectDelay);
+            Thread.Sleep(m_reconnectDelay);
 
             // Now attempt a reconnect
             OpenConnection(connection, data, initializeCallback: null, errorCallback: null);
         }
 
-        private void OpenConnection(IConnection connection, string data, Action initializeCallback, Action<Exception> errorCallback)
+        private void OpenConnection(IConnection connection,
+            string data,
+            Action initializeCallback,
+            Action<Exception> errorCallback)
         {
             // If we're reconnecting add /connect to the url
-            bool reconnecting = initializeCallback == null;
-
-            var url = (reconnecting ? connection.Url : connection.Url + "connect");
-
-            Action<IRequest> prepareRequest = PrepareRequest(connection);
-
-            EventSignal<IResponse> signal;
+            bool _reconnecting = initializeCallback == null;
+            string _url = (_reconnecting ? connection.Url : connection.Url + "connect");
+            Action<IRequest> _prepareRequest = PrepareRequest(connection);
+            EventSignal<IResponse> _signal;
 
             if (shouldUsePost(connection))
             {
-                url += GetReceiveQueryString(connection, data);
+                _url += GetReceiveQueryString(connection, data);
+                Debug.WriteLine(string.Format("SSE: POST {0}", _url));
 
-                Debug.WriteLine(string.Format("SSE: POST {0}", url));
-
-                signal = _httpClient.PostAsync(url, request =>
-                                                        {
-                                                            prepareRequest(request);
-                                                            request.Accept = "text/event-stream";
-                                                        }, new Dictionary<string, string> { { "groups", GetSerializedGroups(connection) } });
+                _signal = _httpClient.PostAsync(
+                    _url,
+                    request =>
+                    {
+                        _prepareRequest(request);
+                        request.Accept = "text/event-stream";
+                    },
+                    new Dictionary<string, string> { 
+                    {
+                        "groups", GetSerializedGroups(connection) } 
+                    });
             }
             else
             {
-                url += GetReceiveQueryStringWithGroups(connection, data);
+                _url += GetReceiveQueryStringWithGroups(connection, data);
+                Debug.WriteLine(string.Format("SSE: GET {0}", _url));
 
-                Debug.WriteLine(string.Format("SSE: GET {0}", url));
-
-                signal = _httpClient.GetAsync(url, request =>
-                {
-                    prepareRequest(request);
-
-                    request.Accept = "text/event-stream";
-                });
+                _signal = _httpClient.GetAsync(
+                    _url,
+                    request =>
+                    {
+                        _prepareRequest(request);
+                        request.Accept = "text/event-stream";
+                    });
             }
 
-            signal.Finished += (sender, e) =>
+            _signal.Finished += (sender, e) =>
             {
                 if (e.Result.IsFaulted)
                 {
-                    var exception = e.Result.Exception.GetBaseException();
-                    if (!HttpBasedTransport.IsRequestAborted(exception))
+                    Exception _exception = e.Result.Exception.GetBaseException();
+
+                    if (!HttpBasedTransport.IsRequestAborted(_exception))
                     {
                         if (errorCallback != null &&
-                            Interlocked.Exchange(ref _initializedCalled, 1) == 0)
-                        {
-                            errorCallback(exception);
-                        }
-                        else if (reconnecting)
-                        {
+                            Interlocked.Exchange(ref m_initializedCalled, 1) == 0)
+                            errorCallback(_exception);
+                        else if (_reconnecting)
                             // Only raise the error event if we failed to reconnect
-                            connection.OnError(exception);
-                        }
+                            connection.OnError(_exception);
                     }
 
-                    if (reconnecting)
+                    if (_reconnecting)
                     {
                         // Retry
                         Reconnect(connection, data);
@@ -116,46 +128,42 @@ namespace SignalR.Client._20.Transports
                 else
                 {
                     // Get the reseponse stream and read it for messages
-                    var response = e.Result;
-                    var stream = response.GetResponseStream();
-                    var reader = new AsyncStreamReader(stream,
-                                                       connection,
-                                                       () =>
-                                                       {
-                                                           if (Interlocked.CompareExchange(ref _initializedCalled, 1, 0) == 0)
-                                                           {
-                                                               initializeCallback();
-                                                           }
-                                                       },
-                                                       () =>
-                                                       {
-                                                           response.Close();
+                    IResponse _response = e.Result;
+                    Stream _stream = _response.GetResponseStream();
+                    AsyncStreamReader _reader = new AsyncStreamReader(
+                        _stream,
+                        connection,
+                        () =>
+                        {
+                            if (Interlocked.CompareExchange(ref m_initializedCalled, 1, 0) == 0)
+                                initializeCallback();
+                        },
+                        () =>
+                        {
+                            _response.Close();
+                            Reconnect(connection, data);
+                        });
 
-                                                           Reconnect(connection, data);
-                                                       });
-
-                    if (reconnecting)
-                    {
+                    if (_reconnecting)
                         // Raise the reconnect event if the connection comes back up
                         connection.OnReconnected();
-                    }
 
-                    reader.StartReading();
+                    _reader.StartReading();
 
                     // Set the reader for this connection
-                    connection.Items[ReaderKey] = reader;
+                    connection.Items[m_readerKey] = _reader;
                 }
             };
 
             if (initializeCallback != null)
             {
-                Thread.Sleep(ConnectionTimeout);
-                if (Interlocked.CompareExchange(ref _initializedCalled, 1, 0) == 0)
+                Thread.Sleep(m_connectionTimeout);
+                if (Interlocked.CompareExchange(ref m_initializedCalled, 1, 0) == 0)
                 {
                     // Stop the connection
                     Stop(connection);
 
-                    // Connection timeout occured
+                    // Connection timeout occurred
                     errorCallback(new TimeoutException());
                 }
             }
@@ -164,20 +172,6 @@ namespace SignalR.Client._20.Transports
         private static bool shouldUsePost(IConnection connection)
         {
             return new List<string>(connection.Groups).Count > 20;
-        }
-
-        protected override void OnBeforeAbort(IConnection connection)
-        {
-            // Get the reader from the connection and stop it
-            var reader = ConnectionExtensions.GetValue<AsyncStreamReader>(connection, ReaderKey);
-            if (reader != null)
-            {
-                // Stop reading data from the stream
-                reader.StopReading(false);
-
-                // Remove the reader
-                connection.Items.Remove(ReaderKey);
-            }
         }
     }
 }

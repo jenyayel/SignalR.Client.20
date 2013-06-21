@@ -10,7 +10,7 @@ namespace SignalR.Client._20
     public interface IConnection
     {
         bool IsActive { get; }
-        long? MessageId { get; set; }
+        string MessageId { get; set; }
         System.Func<string> Sending { get; set; }
         IEnumerable<string> Groups { get; set; }
         IDictionary<string, object> Items { get; }

@@ -168,7 +168,7 @@ namespace SignalR.Client._20.Transports
                 return;
 
             if (connection.MessageId == null)
-                connection.MessageId = 0;
+                connection.MessageId = null;
 
             try
             {
@@ -205,13 +205,13 @@ namespace SignalR.Client._20.Transports
                         }
                     }
 
-                    connection.MessageId = Extensions.Value<long>(result["MessageId"]);
+                    connection.MessageId = Extensions.Value<string>(result["C"]);
 
-                    var transportData = result["TransportData"] as JObject;
+                    var transportData = result["T"] as JObject;
 
                     if (transportData != null)
                     {
-                        var groups = (JArray)transportData["Groups"];
+                        var groups = (JArray)transportData["G"];
                         if (groups != null)
                         {
                             var groupList = new List<string>();

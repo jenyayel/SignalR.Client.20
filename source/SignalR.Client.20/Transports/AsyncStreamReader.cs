@@ -48,6 +48,7 @@ namespace SignalR.Client._20.Transports
 
         public void StartReading()
         {
+            Debug.WriteLine("StartReading");
             if (Interlocked.Exchange(ref _reading, 1) == 0)
             {
                 ReadLoop();
@@ -56,6 +57,7 @@ namespace SignalR.Client._20.Transports
 
         public void StopReading(bool raiseCloseCallback = true)
         {
+            Debug.WriteLine("StopReading");
             if (Interlocked.Exchange(ref _reading, 0) == 1)
             {
                 if (raiseCloseCallback)
@@ -68,9 +70,7 @@ namespace SignalR.Client._20.Transports
         private void ReadLoop()
         {
             if (!Reading)
-            {
                 return;
-            }
 
             var buffer = new byte[1024];
 
@@ -159,6 +159,7 @@ namespace SignalR.Client._20.Transports
 
         private void ProcessChunks()
         {
+            Debug.WriteLine("ProcessChunks");
             while (Reading && _buffer.HasChunks)
             {
                 string line = _buffer.ReadLine();
@@ -191,11 +192,7 @@ namespace SignalR.Client._20.Transports
                 switch (sseEvent.Type)
                 {
                     case EventType.Id:
-                        long id;
-                        if (Int64.TryParse(sseEvent.Data, out id))
-                        {
-                            _connection.MessageId = id;
-                        }
+                        _connection.MessageId = sseEvent.Data;
                         break;
                     case EventType.Data:
                         if (sseEvent.Data.Equals("initialized", StringComparison.OrdinalIgnoreCase))

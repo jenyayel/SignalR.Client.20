@@ -157,6 +157,7 @@ namespace SignalR.Client._20.Http
 			}
 			catch (Exception ex)
 			{
+                Debug.WriteLine("GetResponseCallback: error occured - " + ex.Message);
 				requestState.Response.OnFinish(new CallbackDetail<HttpWebResponse> { IsFaulted = true, Exception = ex });
 			}
 		}

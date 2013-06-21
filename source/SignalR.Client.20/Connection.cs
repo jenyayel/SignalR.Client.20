@@ -63,7 +63,7 @@ namespace SignalR.Client._20
 
 		public bool IsActive { get; private set; }
 
-		public long? MessageId { get; set; }
+		public string MessageId { get; set; }
 
 		public string ConnectionId { get; set; }
 
