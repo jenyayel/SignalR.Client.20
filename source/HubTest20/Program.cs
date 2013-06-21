@@ -35,6 +35,7 @@ namespace HubTest20
             _conn.Start();
             _proxy.Invoke("JoinFromGame", _sessionCode);
 
+            // wait for push message
             Console.ReadKey();
         }
     }
