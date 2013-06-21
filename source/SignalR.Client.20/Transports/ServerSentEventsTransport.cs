@@ -162,10 +162,10 @@ namespace SignalR.Client._20.Transports
                 int _tryed = 0;
                 while (true)
                 {
-                    Thread.Sleep(m_connectionTimeout);
                     _tryed++;
-
                     Debug.Write("Checking if connection initialized for the '" + _tryed.ToString() + "' time: ");
+
+                    Thread.Sleep(m_connectionTimeout);
                     if (Interlocked.CompareExchange(ref m_initializedCalled, 1, 0) == 0)
                     {
                         if (_tryed < m_connectionRetry)
@@ -174,11 +174,15 @@ namespace SignalR.Client._20.Transports
                             continue;
                         }
 
+                        Debug.WriteLine("giving up.");
+
                         // Stop the connection
                         Stop(connection);
 
                         // Connection timeout occurred
                         errorCallback(new TimeoutException());
+
+                        break;
                     }
                     else
                     {
