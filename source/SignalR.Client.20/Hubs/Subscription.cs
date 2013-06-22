@@ -9,9 +9,7 @@ namespace SignalR.Client._20.Hubs
         internal void OnData(object[] data)
         {
             if (Data != null)
-            {
                 Data(data);
-            }
         } 
     }
 }

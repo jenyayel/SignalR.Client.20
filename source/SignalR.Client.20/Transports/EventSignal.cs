@@ -3,49 +3,54 @@ using System.Threading;
 
 namespace SignalR.Client._20.Transports
 {
-	public class EventSignal<T>
-	{
-		private int _attemptCount;
-		private readonly int _maxAttempts;
+    public class EventSignal<T>
+    {
+        private int m_attemptCount;
+        private readonly int m_maxAttempts;
 
-		public EventSignal(int maxAttempts)
-		{
-			_maxAttempts = maxAttempts;
-		}
+        public event EventHandler<CustomEventArgs<T>> Finished;
 
-		public EventSignal() : this(5)
-		{
-		}
+        public EventSignal(int maxAttempts)
+        {
+            m_maxAttempts = maxAttempts;
+        }
 
-		public event EventHandler<CustomEventArgs<T>> Finished;
+        public EventSignal()
+            : this(5)
+        {
+        }
 
-		public void OnFinish(T result)
-		{
-			var handler = Finished;
-			if (handler==null)
-			{
-				if (maxAttemptsReached())
-				{
-					handleNoEventHandler();
-					return;
-				}
-				_attemptCount++;
-				Thread.SpinWait(1000);
-				OnFinish(result);
-				return;
-			}
+        public void OnFinish(T result)
+        {
+            var _handler = Finished;
 
-			handler.Invoke(this, new CustomEventArgs<T> {Result = result});
-		}
+            if (_handler == null)
+            {
+                if (maxAttemptsReached())
+                {
+                    handleNoEventHandler();
+                    return;
+                }
+                m_attemptCount++;
+                Thread.SpinWait(1000);
+                OnFinish(result);
+                return;
+            }
 
-		protected virtual void handleNoEventHandler()
-		{
-			throw new InvalidOperationException("You must attach an event handler to the event signal within a reasonable amount of time.");
-		}
+            _handler.Invoke(this, new CustomEventArgs<T>
+            {
+                Result = result
+            });
+        }
 
-		private bool maxAttemptsReached()
-		{
-			return _attemptCount>_maxAttempts;
-		}
-	}
+        protected virtual void handleNoEventHandler()
+        {
+            throw new InvalidOperationException("You must attach an event handler to the event signal within a reasonable amount of time.");
+        }
+
+        private bool maxAttemptsReached()
+        {
+            return m_attemptCount > m_maxAttempts;
+        }
+    }
 }

@@ -4,15 +4,16 @@ namespace SignalR.Client._20
 {
     internal class DisposableAction : IDisposable
     {
-        private readonly System.Action _action;
+        private readonly Action m_action;
+
         public DisposableAction(System.Action action)
         {
-            _action = action;
+            m_action = action;
         }
 
         public void Dispose()
         {
-            _action();
+            m_action();
         }
     }
 }

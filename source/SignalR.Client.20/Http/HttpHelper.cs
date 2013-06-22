@@ -9,197 +9,201 @@ using SignalR.Infrastructure;
 
 namespace SignalR.Client._20.Http
 {
-	internal static class HttpHelper
-	{
-		public static EventSignal<CallbackDetail<HttpWebResponse>> PostAsync(string url)
-		{
-			return PostInternal(url, requestPreparer: null, postData: null);
-		}
+    internal static class HttpHelper
+    {
+        public static EventSignal<CallbackDetail<HttpWebResponse>> PostAsync(string url)
+        {
+            return PostInternal(url, null, null);
+        }
 
-		public static void PostAsync(string url, IDictionary<string, string> postData)
-		{
-			PostInternal(url, requestPreparer: null, postData: postData);
-		}
+        public static void PostAsync(string url, IDictionary<string, string> postData)
+        {
+            PostInternal(url, null, postData);
+        }
 
-		public static EventSignal<CallbackDetail<HttpWebResponse>> PostAsync(string url, Action<HttpWebRequest> requestPreparer)
-		{
-			return PostInternal(url, requestPreparer, postData: null);
-		}
+        public static EventSignal<CallbackDetail<HttpWebResponse>> PostAsync(
+            string url,
+            Action<HttpWebRequest> requestPreparer)
+        {
+            return PostInternal(url, requestPreparer, null);
+        }
 
-		public static EventSignal<CallbackDetail<HttpWebResponse>> PostAsync(string url, Action<HttpWebRequest> requestPreparer, IDictionary<string, string> postData)
-		{
-			return PostInternal(url, requestPreparer, postData);
-		}
+        public static EventSignal<CallbackDetail<HttpWebResponse>> PostAsync(
+            string url,
+            Action<HttpWebRequest> requestPreparer,
+            IDictionary<string, string> postData)
+        {
+            return PostInternal(url, requestPreparer, postData);
+        }
 
-		public static string ReadAsString(HttpWebResponse response)
-		{
-			try
-			{
-				using (response)
-				{
-					using (Stream stream = response.GetResponseStream())
-					{
-						using (var reader = new StreamReader(stream))
-						{
-							return reader.ReadToEnd();
-						}
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				Debug.WriteLine(string.Format("Failed to read response: {0}", ex));
-				// Swallow exceptions when reading the response stream and just try again.
-				return null;
-			}
-		}
+        public static string ReadAsString(HttpWebResponse response)
+        {
+            try
+            {
+                using (response)
+                {
+                    using (Stream stream = response.GetResponseStream())
+                    {
+                        using (var reader = new StreamReader(stream))
+                        {
+                            return reader.ReadToEnd();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(string.Format("Failed to read response: {0}", ex));
 
-		private static EventSignal<CallbackDetail<HttpWebResponse>> PostInternal(string url, Action<HttpWebRequest> requestPreparer, IDictionary<string, string> postData)
-		{
-			var request = (HttpWebRequest)HttpWebRequest.Create(url);
+                // Swallow exceptions when reading the response stream and just try again.
+                return null;
+            }
+        }
 
-			if (requestPreparer != null)
-			{
-				requestPreparer(request);
-			}
+        private static EventSignal<CallbackDetail<HttpWebResponse>> PostInternal(
+            string url,
+            Action<HttpWebRequest> requestPreparer,
+            IDictionary<string, string> postData)
+        {
+            var _request = (HttpWebRequest)HttpWebRequest.Create(url);
 
-			byte[] buffer = ProcessPostData(postData);
+            if (requestPreparer != null)
+                requestPreparer(_request);
 
-			request.Method = "POST";
-			request.ContentType = "application/x-www-form-urlencoded";
-			// Set the content length if the buffer is non-null
-			request.ContentLength = buffer != null ? buffer.LongLength : 0;
+            byte[] _buffer = ProcessPostData(postData);
 
-			var signal = new EventSignal<CallbackDetail<HttpWebResponse>>();
+            _request.Method = "POST";
+            _request.ContentType = "application/x-www-form-urlencoded";
+            // Set the content length if the buffer is non-null
+            _request.ContentLength = _buffer != null ? _buffer.LongLength : 0;
 
-			if (buffer == null)
-			{
-				// If there's nothing to be written to the request then just get the response
-				GetResponseAsync(request, signal);
-				return signal;
-			}
+            EventSignal<CallbackDetail<HttpWebResponse>> _signal =
+                new EventSignal<CallbackDetail<HttpWebResponse>>();
 
-			var requestState = new RequestState { PostData = buffer, Request = request, Response = signal };
+            if (_buffer == null)
+            {
+                // If there's nothing to be written to the request then just get the response
+                GetResponseAsync(_request, _signal);
+                return _signal;
+            }
 
-			try
-			{
-				request.BeginGetRequestStream(GetRequestStreamCallback, requestState);
-			}
-			catch (Exception ex)
-			{
-				signal.OnFinish(new CallbackDetail<HttpWebResponse> { IsFaulted = true, Exception = ex });
-			}
-			return signal;
-		}
+            RequestState _requestState = new RequestState
+            {
+                PostData = _buffer,
+                Request = _request,
+                Response = _signal
+            };
 
-		public static EventSignal<CallbackDetail<HttpWebResponse>> GetAsync(string url)
-		{
-			return GetAsync(url, requestPreparer: null);
-		}
+            try
+            {
+                _request.BeginGetRequestStream(GetRequestStreamCallback, _requestState);
+            }
+            catch (Exception ex)
+            {
+                _signal.OnFinish(new CallbackDetail<HttpWebResponse> { IsFaulted = true, Exception = ex });
+            }
+            return _signal;
+        }
 
-		public static EventSignal<CallbackDetail<HttpWebResponse>> GetAsync(string url, Action<HttpWebRequest> requestPreparer)
-		{
-			var request = (HttpWebRequest)HttpWebRequest.Create(url);
-			if (requestPreparer != null)
-			{
-				requestPreparer(request);
-			}
-			var signal = new EventSignal<CallbackDetail<HttpWebResponse>>();
-			GetResponseAsync(request, signal);
-			return signal;
-		}
+        public static EventSignal<CallbackDetail<HttpWebResponse>> GetAsync(string url)
+        {
+            return GetAsync(url, requestPreparer: null);
+        }
 
-		public static void GetResponseAsync(HttpWebRequest request, EventSignal<CallbackDetail<HttpWebResponse>> signal)
-		{
-			try
-			{
-				request.BeginGetResponse(GetResponseCallback,
-										 new RequestState { Request = request, PostData = new byte[] { }, Response = signal });
-			}
-			catch (Exception ex)
-			{
-				signal.OnFinish(new CallbackDetail<HttpWebResponse> { Exception = ex, IsFaulted = true });
-			}
-		}
+        public static EventSignal<CallbackDetail<HttpWebResponse>> GetAsync(string url, Action<HttpWebRequest> requestPreparer)
+        {
+            var _request = (HttpWebRequest)HttpWebRequest.Create(url);
+            if (requestPreparer != null)
+            {
+                requestPreparer(_request);
+            }
+            var signal = new EventSignal<CallbackDetail<HttpWebResponse>>();
+            GetResponseAsync(_request, signal);
+            return signal;
+        }
 
-		private static void GetRequestStreamCallback(IAsyncResult asynchronousResult)
-		{
-			RequestState requestState = (RequestState)asynchronousResult.AsyncState;
+        public static void GetResponseAsync(HttpWebRequest request, EventSignal<CallbackDetail<HttpWebResponse>> signal)
+        {
+            try
+            {
+                request.BeginGetResponse(
+                    GetResponseCallback,
+                    new RequestState
+                    {
+                        Request = request,
+                        PostData = new byte[] { },
+                        Response = signal
+                    });
+            }
+            catch (Exception ex)
+            {
+                signal.OnFinish(new CallbackDetail<HttpWebResponse> { Exception = ex, IsFaulted = true });
+            }
+        }
 
-			// End the operation
-			try
-			{
-				Stream postStream = requestState.Request.EndGetRequestStream(asynchronousResult);
+        private static void GetRequestStreamCallback(IAsyncResult asynchronousResult)
+        {
+            RequestState _requestState = (RequestState)asynchronousResult.AsyncState;
 
-				// Write to the request stream.
-				postStream.Write(requestState.PostData, 0, requestState.PostData.Length);
-				postStream.Close();
-			}
-			catch (WebException exception)
-			{
-				requestState.Response.OnFinish(new CallbackDetail<HttpWebResponse> { IsFaulted = true, Exception = exception });
-				return;
-			}
+            // End the operation
+            try
+            {
+                Stream _postStream = _requestState.Request.EndGetRequestStream(asynchronousResult);
 
-			// Start the asynchronous operation to get the response
-			requestState.Request.BeginGetResponse(GetResponseCallback, requestState);
-		}
+                // Write to the request stream.
+                _postStream.Write(_requestState.PostData, 0, _requestState.PostData.Length);
+                _postStream.Close();
+            }
+            catch (WebException exception)
+            {
+                _requestState.Response.OnFinish(new CallbackDetail<HttpWebResponse>
+                {
+                    IsFaulted = true,
+                    Exception = exception
+                });
+                return;
+            }
 
-		private static void GetResponseCallback(IAsyncResult asynchronousResult)
-		{
-			RequestState requestState = (RequestState)asynchronousResult.AsyncState;
+            // Start the asynchronous operation to get the response
+            _requestState.Request.BeginGetResponse(GetResponseCallback, _requestState);
+        }
 
-			// End the operation
-			try
-			{
-				HttpWebResponse response = (HttpWebResponse)requestState.Request.EndGetResponse(asynchronousResult);
-				requestState.Response.OnFinish(new CallbackDetail<HttpWebResponse> { Result = response });
-			}
-			catch (Exception ex)
-			{
-                Debug.WriteLine("GetResponseCallback: error occured - " + ex.Message);
-				requestState.Response.OnFinish(new CallbackDetail<HttpWebResponse> { IsFaulted = true, Exception = ex });
-			}
-		}
+        private static void GetResponseCallback(IAsyncResult asynchronousResult)
+        {
+            RequestState _requestState = (RequestState)asynchronousResult.AsyncState;
 
-		private static byte[] ProcessPostData(IDictionary<string, string> postData)
-		{
-			if (postData == null || postData.Count == 0)
-			{
-				return null;
-			}
+            // End the operation
+            try
+            {
+                HttpWebResponse _response = (HttpWebResponse)_requestState.Request.EndGetResponse(asynchronousResult);
+                _requestState.Response.OnFinish(new CallbackDetail<HttpWebResponse>
+                {
+                    Result = _response
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("GetResponseCallback: error occurred - " + ex.Message);
+                _requestState.Response.OnFinish(new CallbackDetail<HttpWebResponse> { IsFaulted = true, Exception = ex });
+            }
+        }
 
-			var sb = new StringBuilder();
-			foreach (var pair in postData)
-			{
-				if (sb.Length > 0)
-				{
-					sb.Append("&");
-				}
+        private static byte[] ProcessPostData(IDictionary<string, string> postData)
+        {
+            if (postData == null || postData.Count == 0)
+                return null;
 
-				if (String.IsNullOrEmpty(pair.Value))
-				{
-					continue;
-				}
+            var _stringB = new StringBuilder();
+            foreach (var pair in postData)
+            {
+                if (_stringB.Length > 0)
+                    _stringB.Append("&");
 
-				sb.AppendFormat("{0}={1}", pair.Key, UriQueryUtility.UrlEncode(pair.Value));
-			}
-
-			return Encoding.UTF8.GetBytes(sb.ToString());
-		}
-	}
-
-	public class RequestState
-	{
-		public HttpWebRequest Request { get; set; }
-		public EventSignal<CallbackDetail<HttpWebResponse>> Response { get; set; }
-		public byte[] PostData { get; set; }
-	}
-
-	public class CallbackDetail<T>
-	{
-		public bool IsFaulted { get; set; }
-		public Exception Exception { get; set; }
-		public T Result { get; set; }
-	}
+                if (String.IsNullOrEmpty(pair.Value))
+                    continue;
+                _stringB.AppendFormat("{0}={1}", pair.Key, UriQueryUtility.UrlEncode(pair.Value));
+            }
+            return Encoding.UTF8.GetBytes(_stringB.ToString());
+        }
+    }
 }

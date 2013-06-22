@@ -78,7 +78,7 @@ namespace SignalR.Client._20.Transports
                 _url += GetReceiveQueryString(connection, data);
                 Debug.WriteLine(string.Format("SSE: POST {0}", _url));
 
-                _signal = _httpClient.PostAsync(
+                _signal = m_httpClient.PostAsync(
                     _url,
                     request =>
                     {
@@ -95,7 +95,7 @@ namespace SignalR.Client._20.Transports
                 _url += GetReceiveQueryStringWithGroups(connection, data);
                 Debug.WriteLine(string.Format("SSE: GET {0}", _url));
 
-                _signal = _httpClient.GetAsync(
+                _signal = m_httpClient.GetAsync(
                     _url,
                     request =>
                     {

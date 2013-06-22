@@ -1,27 +1,25 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace SignalR.Client._20.Hubs {
-	public static class HubProxyExtensions
-	{
-        public static T GetValue<T>(IHubProxy proxy, string name) {
-			object value = proxy[name];
-			return Convert<T>(value);
+namespace SignalR.Client._20.Hubs
+{
+    public static class HubProxyExtensions
+    {
+        public static T GetValue<T>(IHubProxy proxy, string name)
+        {
+            object _value = proxy[name];
+            return Convert<T>(_value);
         }
 
-		private static T Convert<T>(object obj)
-		{
-			if (obj == null)
-			{
-				return default(T);
-			}
+        private static T Convert<T>(object obj)
+        {
+            if (obj == null)
+                return default(T);
 
-			if (typeof(T).IsAssignableFrom(obj.GetType()))
-			{
-				return (T)obj;
-			}
+            if (typeof(T).IsAssignableFrom(obj.GetType()))
+                return (T)obj;
 
-			return JsonConvert.DeserializeObject<T>(obj.ToString());
-		}
+            return JsonConvert.DeserializeObject<T>(obj.ToString());
+        }
     }
 }

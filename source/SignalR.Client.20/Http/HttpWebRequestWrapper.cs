@@ -5,22 +5,22 @@ namespace SignalR.Client._20.Http
 {
     public class HttpWebRequestWrapper : IRequest
     {
-        private readonly HttpWebRequest _request;
+        private readonly HttpWebRequest m_request;
 
         public HttpWebRequestWrapper(HttpWebRequest request)
         {
-            _request = request;
+            m_request = request;
         }
 
         public string UserAgent
         {
             get
             {
-                return _request.UserAgent;
+                return m_request.UserAgent;
             }
             set
             {
-                _request.UserAgent = value;
+                m_request.UserAgent = value;
             }
         }
 
@@ -28,11 +28,11 @@ namespace SignalR.Client._20.Http
         {
             get
             {
-                return _request.Credentials;
+                return m_request.Credentials;
             }
             set
             {
-                _request.Credentials = value;
+                m_request.Credentials = value;
             }
         }
 
@@ -40,11 +40,11 @@ namespace SignalR.Client._20.Http
         {
             get
             {
-                return _request.CookieContainer;
+                return m_request.CookieContainer;
             }
             set
             {
-                _request.CookieContainer = value;
+                m_request.CookieContainer = value;
             }
         }
 
@@ -52,17 +52,17 @@ namespace SignalR.Client._20.Http
         {
             get
             {
-                return _request.Accept;
+                return m_request.Accept;
             }
             set
             {
-                _request.Accept = value;
+                m_request.Accept = value;
             }
         }
 
         public void Abort()
         {
-            _request.Abort();
+            m_request.Abort();
         }
     }
 }

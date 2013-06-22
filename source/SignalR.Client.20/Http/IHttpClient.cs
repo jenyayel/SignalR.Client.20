@@ -8,6 +8,7 @@ namespace SignalR.Client._20.Http
     public interface IHttpClient
     {
         EventSignal<IResponse> GetAsync(string url, Action<IRequest> prepareRequest);
+
         EventSignal<IResponse> PostAsync(string url, Action<IRequest> prepareRequest, Dictionary<string, string> postData);
     }
 }

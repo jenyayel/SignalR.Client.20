@@ -5,58 +5,57 @@ namespace SignalR.Client._20.Infrastructure
 {
     public class ChunkBuffer
     {
-        private int _offset;
-        private readonly StringBuilder _buffer;
-        private readonly StringBuilder _lineBuilder;
+        private int m_offset;
+        private readonly StringBuilder m_buffer;
+        private readonly StringBuilder m_lineBuilder;
 
         public ChunkBuffer()
         {
-            _buffer = new StringBuilder();
-            _lineBuilder = new StringBuilder();
+            m_buffer = new StringBuilder();
+            m_lineBuilder = new StringBuilder();
         }
 
         public bool HasChunks
         {
             get
             {
-                return _offset < _buffer.Length;
+                return m_offset < m_buffer.Length;
             }
         }
 
         public string ReadLine()
         {
-            // Lock while reading so that we can make safe assuptions about the buffer indicies
-            lock (_buffer)
+            // Lock while reading so that we can make safe assumptions about the buffer indices
+            lock (m_buffer)
             {
-                for (int i = _offset; i < _buffer.Length; i++, _offset++)
+                for (int i = m_offset; i < m_buffer.Length; i++, m_offset++)
                 {
-                    if (_buffer[i] == '\n')
+                    if (m_buffer[i] == '\n')
                     {
-                        _buffer.Remove(0, _offset + 1);
+                        m_buffer.Remove(0, m_offset + 1);
 
-                        string line = _lineBuilder.ToString();
-                    	_lineBuilder.Length = 0;
-                        _offset = 0;
-                        return line;
+                        string _line = m_lineBuilder.ToString();
+                    	m_lineBuilder.Length = 0;
+                        m_offset = 0;
+                        return _line;
                     }
-                    _lineBuilder.Append(_buffer[i]);
+                    m_lineBuilder.Append(m_buffer[i]);
                 }
-
                 return null;
             }
         }
 
         public void Add(byte[] buffer, int length)
         {
-            lock (_buffer)
+            lock (m_buffer)
             {
-                _buffer.Append(Encoding.UTF8.GetString(buffer, 0, length));
+                m_buffer.Append(Encoding.UTF8.GetString(buffer, 0, length));
             }
         }
 
         public void Add(ArraySegment<byte> buffer)
         {
-            _buffer.Append(Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count));
+            m_buffer.Append(Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count));
         }
     }
 }

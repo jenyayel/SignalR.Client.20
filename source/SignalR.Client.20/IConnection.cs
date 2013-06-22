@@ -4,6 +4,7 @@ using System.Net;
 using SignalR.Client._20.Http;
 using SignalR.Client._20.Infrastructure;
 using SignalR.Client._20.Transports;
+using Newtonsoft.Json.Linq;
 
 namespace SignalR.Client._20
 {
@@ -11,7 +12,7 @@ namespace SignalR.Client._20
     {
         bool IsActive { get; }
         string MessageId { get; set; }
-        System.Func<string> Sending { get; set; }
+        Func<string> Sending { get; set; }
         IEnumerable<string> Groups { get; set; }
         IDictionary<string, object> Items { get; }
         string ConnectionId { get; }
@@ -23,7 +24,7 @@ namespace SignalR.Client._20
         ICredentials Credentials { get; set; }
         CookieContainer CookieContainer { get; set; }
 
-        event System.Action Closed;
+        event Action Closed;
         event Action<Exception> Error;
         event Action<string> Received;
 
@@ -31,7 +32,7 @@ namespace SignalR.Client._20
         EventSignal<object> Send(string data);
         EventSignal<T> Send<T>(string data);
 
-        void OnReceived(Newtonsoft.Json.Linq.JToken data);
+        void OnReceived(JToken data);
         void OnError(Exception ex);
         void OnReconnected();
         void PrepareRequest(IRequest request);

@@ -7,15 +7,17 @@ namespace SignalR.Client._20.Hubs
 {
 	public class HubProxy : IHubProxy
 	{
-		private readonly string _hubName;
-		private readonly IConnection _connection;
-		private readonly Dictionary<string, object> _state = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-		private readonly Dictionary<string, Subscription> _subscriptions = new Dictionary<string, Subscription>(StringComparer.OrdinalIgnoreCase);
+		private readonly string m_hubName;
+		private readonly IConnection m_connection;
+		private readonly Dictionary<string, object> m_state = 
+            new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, Subscription> m_subscriptions = 
+            new Dictionary<string, Subscription>(StringComparer.OrdinalIgnoreCase);
 
 		public HubProxy(IConnection connection, string hubName)
 		{
-			_connection = connection;
-			_hubName = hubName;
+			m_connection = connection;
+			m_hubName = hubName;
 		}
 
 		public object this[string name]
@@ -23,30 +25,28 @@ namespace SignalR.Client._20.Hubs
 			get
 			{
 				object value;
-				_state.TryGetValue(name, out value);
+				m_state.TryGetValue(name, out value);
 				return value;
 			}
 			set
 			{
-				_state[name] = value;
+				m_state[name] = value;
 			}
 		}
 
 		public Subscription Subscribe(string eventName)
 		{
 			if (eventName == null)
-			{
 				throw new ArgumentNullException("eventName");
-			}
 
-			Subscription subscription;
-			if (!_subscriptions.TryGetValue(eventName, out subscription))
+			Subscription _subscription;
+			if (!m_subscriptions.TryGetValue(eventName, out _subscription))
 			{
-				subscription = new Subscription();
-				_subscriptions.Add(eventName, subscription);
+				_subscription = new Subscription();
+				m_subscriptions.Add(eventName, _subscription);
 			}
 
-			return subscription;
+			return _subscription;
 		}
 
 		public EventSignal<object> Invoke(string method, params object[] args)
@@ -57,63 +57,57 @@ namespace SignalR.Client._20.Hubs
 		public EventSignal<T> Invoke<T>(string method, params object[] args)
 		{
 			if (method == null)
-			{
 				throw new ArgumentNullException("method");
-			}
 
 			var hubData = new HubInvocation
 			{
-				Hub = _hubName,
+				Hub = m_hubName,
 				Method = method,
 				Args = args,
-				State = _state,
+				State = m_state,
                 CallbackId = "1"
 			};
 
-			var value = JsonConvert.SerializeObject(hubData);
-			var newSignal = new OptionalEventSignal<T>();
-			var signal = _connection.Send<HubResult<T>>(value);
-			signal.Finished += (sender, e) =>
+			var _value = JsonConvert.SerializeObject(hubData);
+			var _newSignal = new OptionalEventSignal<T>();
+			var _signal = m_connection.Send<HubResult<T>>(_value);
+
+			_signal.Finished += (sender, e) =>
 			{
 				if (e.Result != null)
 				{
-
 					if (e.Result.Error != null)
-					{
 						throw new InvalidOperationException(e.Result.Error);
-					}
 
-					HubResult<T> hubResult = e.Result;
-					if (hubResult.State != null)
+					HubResult<T> _hubResult = e.Result;
+					if (_hubResult.State != null)
 					{
-						foreach (var pair in hubResult.State)
+						foreach (var pair in _hubResult.State)
 						{
 							this[pair.Key] = pair.Value;
 						}
 					}
 
-					newSignal.OnFinish(hubResult.Result);
+					_newSignal.OnFinish(_hubResult.Result);
 				}
 				else
 				{
-					newSignal.OnFinish(default(T));
+					_newSignal.OnFinish(default(T));
 				}
 			};
-			return newSignal;
+			return _newSignal;
 		}
 
 		public void InvokeEvent(string eventName, object[] args)
 		{
 			Subscription eventObj;
-			if (_subscriptions.TryGetValue(eventName, out eventObj))
-			{
+			if (m_subscriptions.TryGetValue(eventName, out eventObj))
 				eventObj.OnData(args);
-			}
 		}
 
 		public IEnumerable<string> GetSubscriptions()
 		{
-			return _subscriptions.Keys;
+			return m_subscriptions.Keys;
 		}
 	}
 }

@@ -11,60 +11,47 @@ namespace SignalR.Client._20.Transports
 {
     public class AsyncStreamReader
     {
-        private readonly object _bufferLock = new object();
-        private readonly Stream _stream;
-        private readonly ChunkBuffer _buffer;
-        private readonly System.Action _initializeCallback;
-        private readonly System.Action _closeCallback;
-        private readonly IConnection _connection;
-        private int _processingQueue;
-        private int _reading;
-        private bool _processingBuffer;
+        private readonly Stream m_stream;
+        private readonly ChunkBuffer m_buffer;
+        private readonly Action m_initializeCallback;
+        private readonly Action m_closeCallback;
+        private readonly IConnection m_connection;
+        private int m_processingQueue;
+        private int m_reading;
+        private bool m_processingBuffer;
 
-        protected object BufferLock
+        public AsyncStreamReader(Stream stream,
+            IConnection connection,
+            Action initializeCallback,
+            Action closeCallback)
         {
-            get
-            {
-                return _bufferLock;
-            }
-        }
-
-        public AsyncStreamReader(Stream stream, IConnection connection, System.Action initializeCallback, System.Action closeCallback)
-        {
-            _initializeCallback = initializeCallback;
-            _closeCallback = closeCallback;
-            _stream = stream;
-            _connection = connection;
-            _buffer = new ChunkBuffer();
+            m_initializeCallback = initializeCallback;
+            m_closeCallback = closeCallback;
+            m_stream = stream;
+            m_connection = connection;
+            m_buffer = new ChunkBuffer();
         }
 
         public bool Reading
         {
             get
             {
-                return _reading == 1;
+                return m_reading == 1;
             }
         }
 
         public void StartReading()
         {
             Debug.WriteLine("StartReading");
-            if (Interlocked.Exchange(ref _reading, 1) == 0)
-            {
+            if (Interlocked.Exchange(ref m_reading, 1) == 0)
                 ReadLoop();
-            }
         }
 
-        public void StopReading(bool raiseCloseCallback = true)
+        public void StopReading(bool raiseCloseCallback)
         {
-            Debug.WriteLine("StopReading");
-            if (Interlocked.Exchange(ref _reading, 0) == 1)
-            {
-                if (raiseCloseCallback)
-                {
-                    _closeCallback();
-                }
-            }
+            if (Interlocked.Exchange(ref m_reading, 0) == 1
+                && raiseCloseCallback)
+                m_closeCallback();
         }
 
         private void ReadLoop()
@@ -72,10 +59,10 @@ namespace SignalR.Client._20.Transports
             if (!Reading)
                 return;
 
-            var buffer = new byte[1024];
+            var _buffer = new byte[1024];
+            var _signal = new EventSignal<CallbackDetail<int>>();
 
-            var signal = new EventSignal<CallbackDetail<int>>();
-            signal.Finished += (sender, e) =>
+            _signal.Finished += (sender, e) =>
             {
                 if (e.Result.IsFaulted)
                 {
@@ -84,170 +71,125 @@ namespace SignalR.Client._20.Transports
                     if (!HttpBasedTransport.IsRequestAborted(exception))
                     {
                         if (!(exception is IOException))
-                        {
-                            _connection.OnError(exception);
-                        }
-
-                        StopReading();
+                            m_connection.OnError(exception);
+                        StopReading(true);
                     }
                     return;
                 }
 
-                int read = e.Result.Result;
+                int _read = e.Result.Result;
 
-                if (read > 0)
-                {
+                if (_read > 0)
                     // Put chunks in the buffer
-                    _buffer.Add(buffer, read);
-                }
+                    m_buffer.Add(_buffer, _read);
 
-                if (read == 0)
+                if (_read == 0)
                 {
                     // Stop any reading we're doing
-                    StopReading();
-
+                    StopReading(true);
                     return;
                 }
 
                 // Keep reading the next set of data
                 ReadLoop();
 
-                if (read <= buffer.Length)
-                {
+                if (_read <= _buffer.Length)
                     // If we read less than we wanted or if we filled the buffer, process it
                     ProcessBuffer();
-                }
             };
-            StreamExtensions.ReadAsync(signal, _stream, buffer);
+            StreamExtensions.ReadAsync(_signal, m_stream, _buffer);
         }
 
         private void ProcessBuffer()
         {
             if (!Reading)
-            {
                 return;
-            }
 
-            if (_processingBuffer)
+            if (m_processingBuffer)
             {
                 // Increment the number of times we should process messages
-                _processingQueue++;
+                m_processingQueue++;
                 return;
             }
 
-            _processingBuffer = true;
+            m_processingBuffer = true;
 
-            int total = Math.Max(1, _processingQueue);
+            int _total = Math.Max(1, m_processingQueue);
 
-            for (int i = 0; i < total; i++)
+            for (int i = 0; i < _total; i++)
             {
                 if (!Reading)
-                {
                     return;
-                }
-
                 ProcessChunks();
             }
 
-            if (_processingQueue > 0)
-            {
-                _processingQueue -= total;
-            }
+            if (m_processingQueue > 0)
+                m_processingQueue -= _total;
 
-            _processingBuffer = false;
+            m_processingBuffer = false;
         }
 
         private void ProcessChunks()
         {
             Debug.WriteLine("ProcessChunks");
-            while (Reading && _buffer.HasChunks)
+            while (Reading && m_buffer.HasChunks)
             {
-                string line = _buffer.ReadLine();
+                string _line = m_buffer.ReadLine();
 
                 // No new lines in the buffer so stop processing
-                if (line == null)
-                {
+                if (_line == null)
                     break;
-                }
 
                 if (!Reading)
-                {
                     return;
-                }
 
                 // Try parsing the sseEvent
-                SseEvent sseEvent;
-                if (!TryParseEvent(line, out sseEvent))
-                {
+                SseEvent _sseEvent;
+                if (!SseEvent.TryParse(_line, out _sseEvent))
                     continue;
-                }
 
                 if (!Reading)
-                {
                     return;
-                }
 
-                Debug.WriteLine("SSE READ: " + sseEvent);
+                Debug.WriteLine("SSE READ: " + _sseEvent);
 
-                switch (sseEvent.Type)
+                switch (_sseEvent.Type)
                 {
                     case EventType.Id:
-                        _connection.MessageId = sseEvent.Data;
+                        m_connection.MessageId = _sseEvent.Data;
                         break;
                     case EventType.Data:
-                        if (sseEvent.Data.Equals("initialized", StringComparison.OrdinalIgnoreCase))
+                        if (_sseEvent.Data.Equals("initialized", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (_initializeCallback != null)
-                            {
+                            if (m_initializeCallback != null)
                                 // Mark the connection as started
-                                _initializeCallback();
-                            }
+                                m_initializeCallback();
                         }
                         else
                         {
                             if (Reading)
                             {
-                                // We don't care about timedout messages here since it will just reconnect
+                                // We don't care about timeout messages here since it will just reconnect
                                 // as part of being a long running request
-                                bool timedOutReceived;
-                                bool disconnectReceived;
+                                bool _timedOutReceived;
+                                bool _disconnectReceived;
 
-                                HttpBasedTransport.ProcessResponse(_connection, sseEvent.Data, out timedOutReceived, out disconnectReceived);
+                                HttpBasedTransport.ProcessResponse(
+                                    m_connection,
+                                    _sseEvent.Data,
+                                    out _timedOutReceived,
+                                    out _disconnectReceived);
 
-                                if (disconnectReceived)
-                                {
-                                    _connection.Stop();
-                                }
+                                if (_disconnectReceived)
+                                    m_connection.Stop();
 
-                                if (timedOutReceived)
-                                {
+                                if (_timedOutReceived)
                                     return;
-                                }
                             }
                         }
                         break;
                 }
             }
-        }
-
-        protected bool TryParseEvent(string line, out SseEvent sseEvent)
-        {
-            sseEvent = null;
-
-            if (line.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
-            {
-                string data = line.Substring("data:".Length).Trim();
-                sseEvent = new SseEvent(EventType.Data, data);
-                return true;
-            }
-            else if (line.StartsWith("id:", StringComparison.OrdinalIgnoreCase))
-            {
-                string data = line.Substring("id:".Length).Trim();
-                sseEvent = new SseEvent(EventType.Id, data);
-                return true;
-            }
-
-            return false;
         }
     }
 }

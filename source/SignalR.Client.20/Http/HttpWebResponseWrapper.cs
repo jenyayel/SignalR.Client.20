@@ -7,26 +7,26 @@ namespace SignalR.Client._20.Http
 {
     public class HttpWebResponseWrapper : IResponse
     {
-        private readonly HttpWebResponse _response;
+        private readonly HttpWebResponse m_response;
 
         public HttpWebResponseWrapper(HttpWebResponse response)
         {
-            _response = response;
+            m_response = response;
         }
 
         public string ReadAsString()
         {
-            return HttpHelper.ReadAsString(_response);
+            return HttpHelper.ReadAsString(m_response);
         }
 
         public Stream GetResponseStream()
         {
-            return _response.GetResponseStream();
+            return m_response.GetResponseStream();
         }
 
         public void Close()
         {
-            ((IDisposable)_response).Dispose();
+            ((IDisposable)m_response).Dispose();
         }
 
     	public bool IsFaulted { get; set; }
