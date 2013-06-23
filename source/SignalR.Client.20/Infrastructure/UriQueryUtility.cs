@@ -86,13 +86,13 @@ namespace SignalR.Infrastructure
                 return null;
 
             byte[] bytes = Encoding.UTF8.GetBytes(str);
-            byte[] encodedBytes = UrlEncode(bytes, 0, bytes.Length, alwaysCreateNewReturnValue: false);
+            byte[] encodedBytes = UrlEncode(bytes, 0, bytes.Length, false);
             return Encoding.UTF8.GetString(encodedBytes, 0, encodedBytes.Length);
         }
 
         public static byte[] UrlEncodeToBytes(byte[] bytes, int offset, int count)
         {
-            return UrlEncode(bytes, offset, count, alwaysCreateNewReturnValue: true);
+            return UrlEncode(bytes, offset, count, true);
         }
 
         #endregion

@@ -26,10 +26,10 @@ namespace SignalR.Client._20.Transports
 
         protected override void OnStart(IConnection connection, string data, System.Action initializeCallback, Action<Exception> errorCallback)
         {
-            PollingLoop(connection, data, initializeCallback, errorCallback);
+            PollingLoop(connection, data, initializeCallback, errorCallback, false);
         }
 
-        private void PollingLoop(IConnection connection, string data, System.Action initializeCallback, Action<Exception> errorCallback, bool raiseReconnect = false)
+        private void PollingLoop(IConnection connection, string data, System.Action initializeCallback, Action<Exception> errorCallback, bool raiseReconnect)
         {
             string _url = connection.Url;
             var _reconnectTokenSource = new CancellationTokenSource();
@@ -125,9 +125,9 @@ namespace SignalR.Client._20.Transports
                                         PollingLoop(
                                             connection,
                                             data,
-                                            initializeCallback: null,
-                                            errorCallback: null,
-                                            raiseReconnect: _shouldRaiseReconnect);
+                                            null, // initializeCallback
+                                            null, // errorCallback
+                                            _shouldRaiseReconnect); // raiseReconnect
                                     }
                                 }
                             }
@@ -140,9 +140,9 @@ namespace SignalR.Client._20.Transports
                                 PollingLoop(
                                     connection,
                                     data,
-                                    initializeCallback: null,
-                                    errorCallback: null,
-                                    raiseReconnect: _shouldRaiseReconnect);
+                                    null, // initializeCallback
+                                    null, // errorCallback
+                                    _shouldRaiseReconnect); // raiseReconnect
                             }
                         }
                     }

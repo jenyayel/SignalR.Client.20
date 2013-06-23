@@ -10,7 +10,7 @@ namespace SignalR.Client._20.Http
             string url, 
             Action<IRequest> prepareRequest)
         {
-            return client.PostAsync(url, prepareRequest, postData: null);
+            return client.PostAsync(url, prepareRequest, null);
         }
     }
 }

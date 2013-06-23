@@ -59,7 +59,7 @@ namespace SignalR.Client._20.Transports
             Thread.Sleep(m_reconnectDelay);
 
             // Now attempt a reconnect
-            OpenConnection(connection, data, initializeCallback: null, errorCallback: null);
+            OpenConnection(connection, data, null, null);
         }
 
         private void OpenConnection(IConnection connection,

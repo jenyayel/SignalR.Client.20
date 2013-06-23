@@ -107,7 +107,7 @@ namespace SignalR.Client._20.Http
 
         public static EventSignal<CallbackDetail<HttpWebResponse>> GetAsync(string url)
         {
-            return GetAsync(url, requestPreparer: null);
+            return GetAsync(url, null);
         }
 
         public static EventSignal<CallbackDetail<HttpWebResponse>> GetAsync(string url, Action<HttpWebRequest> requestPreparer)
