@@ -76,7 +76,7 @@ namespace SignalR.Client._20.Transports
             if (shouldUsePost(connection))
             {
                 _url += GetReceiveQueryString(connection, data);
-                Debug.WriteLine(string.Format("SSE: POST {0}", _url));
+                Debug.WriteLine("ServerSentEventsTransport: POST {0}", _url);
 
                 _signal = m_httpClient.PostAsync(
                     _url,
@@ -93,7 +93,7 @@ namespace SignalR.Client._20.Transports
             else
             {
                 _url += GetReceiveQueryStringWithGroups(connection, data);
-                Debug.WriteLine(string.Format("SSE: GET {0}", _url));
+                Debug.WriteLine("ServerSentEventsTransport: GET {0}", _url);
 
                 _signal = m_httpClient.GetAsync(
                     _url,
@@ -163,18 +163,18 @@ namespace SignalR.Client._20.Transports
                 while (true)
                 {
                     _tryed++;
-                    Debug.Write("Checking if connection initialized for the '" + _tryed.ToString() + "' time: ");
+                    Debug.WriteLine("Checking if connection initialized for the {0} time: ", _tryed.ToString());
 
                     Thread.Sleep(m_connectionTimeout);
                     if (Interlocked.CompareExchange(ref m_initializedCalled, 1, 0) == 0)
                     {
                         if (_tryed < m_connectionRetry)
                         {
-                            Debug.WriteLine("failed.");
+                            Debug.WriteLine("Connection initialized failed after {0} times.", _tryed.ToString());
                             continue;
                         }
 
-                        Debug.WriteLine("giving up.");
+                        Debug.WriteLine("Giving up on connection initializing.");
 
                         // Stop the connection
                         Stop(connection);
@@ -186,7 +186,7 @@ namespace SignalR.Client._20.Transports
                     }
                     else
                     {
-                        Debug.WriteLine("success.");
+                        Debug.WriteLine("Connection initialized succeed.");
                         break;
                     }
                 }

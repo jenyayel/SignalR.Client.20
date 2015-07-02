@@ -42,7 +42,7 @@ namespace SignalR.Client._20.Transports
 
             _url += GetReceiveQueryString(connection, data);
 
-            Debug.WriteLine(string.Format("LP: {0}", _url));
+            Debug.WriteLine("LongPollingTransport: PollingLoop for [{0}]", _url);
 
             var _signal = m_httpClient.PostAsync(
                 _url,
@@ -71,7 +71,7 @@ namespace SignalR.Client._20.Transports
                         // Get the response
                         var _raw = e.Result.ReadAsString();
 
-                        Debug.WriteLine(string.Format("LP Receive: {0}", _raw));
+                        Debug.WriteLine("LongPollingTransport: Receive [{0}]", _raw);
 
                         if (!String.IsNullOrEmpty(_raw))
                             ProcessResponse(connection, _raw, out _shouldRaiseReconnect, out _disconnectedReceived);

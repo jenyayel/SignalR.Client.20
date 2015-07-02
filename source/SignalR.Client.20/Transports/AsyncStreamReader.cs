@@ -42,7 +42,7 @@ namespace SignalR.Client._20.Transports
 
         public void StartReading()
         {
-            Debug.WriteLine("StartReading");
+            Debug.WriteLine("AsyncStreamReader: StartReading");
             if (Interlocked.Exchange(ref m_reading, 1) == 0)
                 ReadLoop();
         }
@@ -131,7 +131,7 @@ namespace SignalR.Client._20.Transports
 
         private void ProcessChunks()
         {
-            Debug.WriteLine("ProcessChunks");
+            Debug.WriteLine("AsyncStreamReader: ProcessChunks");
             while (Reading && m_buffer.HasChunks)
             {
                 string _line = m_buffer.ReadLine();
@@ -151,7 +151,7 @@ namespace SignalR.Client._20.Transports
                 if (!Reading)
                     return;
 
-                Debug.WriteLine("SSE READ: " + _sseEvent);
+                Debug.WriteLine("AsyncStreamReader: SSE READ [{0}]", _sseEvent.ToString());
 
                 switch (_sseEvent.Type)
                 {

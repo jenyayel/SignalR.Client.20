@@ -85,6 +85,7 @@ namespace SignalR.Client._20.Transports
                     return;
                 }
 
+                Debug.WriteLine("HttpBasedTransport: finished send with raw result {0}", _raw);
                 _returnSignal.OnFinish(JsonConvert.DeserializeObject<T>(_raw));
             };
             return _returnSignal;
@@ -162,7 +163,7 @@ namespace SignalR.Client._20.Transports
         {
             timedOut = false;
             disconnected = false;
-            Debug.WriteLine("ProcessResponse: " + response);
+            Debug.WriteLine("HttpBasedTransport: ProcessResponse [{0}]", response);
 
             if (String.IsNullOrEmpty(response))
                 return;
@@ -173,7 +174,6 @@ namespace SignalR.Client._20.Transports
             try
             {
                 var _result = JValue.Parse(response);
-                Debug.WriteLine("ProcessResponse: result parsed");
 
                 if (!_result.HasValues)
                     return;
@@ -192,12 +192,11 @@ namespace SignalR.Client._20.Transports
                     {
                         try
                         {
-                            Debug.WriteLine("ProcessResponse: before invoking OnReceived");
                             connection.OnReceived(message);
                         }
                         catch (Exception ex)
                         {
-                            Debug.WriteLine("ProcessResponse: exception in OnReceived event '" + ex.Message + "'.");
+                            Debug.WriteLine("HttpBasedTransport: ProcessResponse exception in OnReceived event [{0}]", ex.Message);
                             connection.OnError(ex);
                         }
                     }
@@ -223,7 +222,7 @@ namespace SignalR.Client._20.Transports
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(string.Format("Failed to response: {0}", ex));
+                Debug.WriteLine("HttpBasedTransport: ProcessResponse failed to response: {0}", ex.ToString());
                 connection.OnError(ex);
             }
         }

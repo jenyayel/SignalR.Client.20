@@ -53,7 +53,7 @@ namespace SignalR.Client._20.Http
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(string.Format("Failed to read response: {0}", ex));
+                Debug.WriteLine("Failed to read response: {0}", ex.ToString());
 
                 // Swallow exceptions when reading the response stream and just try again.
                 return null;
@@ -183,7 +183,7 @@ namespace SignalR.Client._20.Http
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("GetResponseCallback: error occurred - " + ex.Message);
+                Debug.WriteLine("GetResponseCallback: error occurred: {0}", ex.Message);
                 _requestState.Response.OnFinish(new CallbackDetail<HttpWebResponse> { IsFaulted = true, Exception = ex });
             }
         }

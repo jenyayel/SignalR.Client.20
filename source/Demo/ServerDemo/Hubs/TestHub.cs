@@ -16,5 +16,15 @@ namespace ServerDemo.Hubs
                 from = from
             });
         }
+
+        public dynamic RequestReplyDynamic()
+        {
+            return new { time = DateTime.Now.ToLongTimeString() };
+        }
+
+        public int RequestReplyValueType()
+        {
+            return DateTime.Now.Millisecond;
+        }
     }
 }

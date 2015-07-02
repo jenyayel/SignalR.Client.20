@@ -34,6 +34,11 @@ namespace SignalR.Client._20.Transports
 
             return false;
         }
+
+        public override string ToString()
+        {
+            return String.Format("Type: [{0}] Data: [{1}]", Type, Data);
+        }
     }
 
     public enum EventType

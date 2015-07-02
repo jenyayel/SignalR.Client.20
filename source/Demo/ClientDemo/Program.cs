@@ -27,20 +27,44 @@ namespace ClientDemo
 
             Console.Write("Connecting... ");
             connection.Start();
-            Console.WriteLine("done. Hit 'enter' to send message or other key to exit.");
+            Console.WriteLine("done. Hit: ");
+            Console.WriteLine("1:\tSend hello message");
+            Console.WriteLine("2:\tRequest => Reply with dynamic reply");
+            Console.WriteLine("3:\tRequest => Reply with value type");
+            Console.WriteLine("Esc:\tExit");
+            Console.WriteLine("");
 
-            while (true)
+            var _exit = false;
+            while (!_exit)
             {
-                if (Console.ReadKey().Key == ConsoleKey.Enter)
+                switch (Console.ReadKey(true).Key)
                 {
-                    Console.Write("Sending hi... ");
-                    proxy.Invoke("Ping", Environment.UserName).Finished += (sender, e) =>
-                    {
-                        Console.WriteLine("done");
-                    };
+                    case ConsoleKey.D1:
+                        Console.Write("Sending hi... ");
+                        proxy.Invoke("Ping", Environment.UserName).Finished += (sender, e) =>
+                        {
+                            Console.WriteLine("done");
+                        };
+                        break;
+                    case ConsoleKey.D2:
+                        Console.Write("Sending request... ");
+                        proxy.Invoke("RequestReplyDynamic").Finished += (sender, e) =>
+                        {
+                            var _first = e.Result as JToken;
+                            Console.WriteLine(" got reply [{0}]", _first["time"].ToString());
+                        };
+                        break;
+                    case ConsoleKey.D3:
+                        Console.Write("Sending request... ");
+                        proxy.Invoke("RequestReplyValueType").Finished += (sender, e) =>
+                        {
+                            Console.WriteLine("got reply  [{0}]", e.Result);
+                        };
+                        break;
+                    case ConsoleKey.Escape:
+                        _exit = true;
+                        break;
                 }
-                else
-                    break;
             }
         }
     }
