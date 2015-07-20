@@ -14,6 +14,11 @@ namespace SignalR.Client._20.Hubs
 		{
 		}
 
+        public HubConnection(string url, IDictionary<string, string> queryString)
+            : base(GetUrl(url), queryString)
+        {
+        }
+
 		public override void Start(IClientTransport transport)
 		{
 			Sending += OnConnectionSending;

@@ -14,7 +14,12 @@ namespace ClientDemo
             // uncomment below to stream debug into console
             // Debug.Listeners.Add(new ConsoleTraceListener());
 
-            HubConnection connection = new HubConnection("http://localhost:58438/");
+            // this is an optional query parameters to sent with each message
+            var query = new Dictionary<string, string>();
+            query.Add("version", "1.0");
+
+            // initialize connection and its proxy
+            HubConnection connection = new HubConnection("http://localhost:58438/", query);
             IHubProxy proxy = connection.CreateProxy("TestHub");
 
             // subscribe to event
